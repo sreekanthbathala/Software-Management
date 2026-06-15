@@ -1,0 +1,75 @@
+from django.contrib.auth.models import AbstractUser
+from django.db import models
+
+
+class User(AbstractUser):
+    Role_CHOICES = (
+        ('HR', 'HR'),
+        ('Manager', 'Manager'),
+        ('Employee', 'Employee'),
+        ('Instructor', 'Instructor')
+    )
+    role = models.CharField(max_length=20, choices=Role_CHOICES, default='Employee')
+    def __str__(self):
+        return f"{self.username} ({self.role})"
+
+class Project(models.Model):
+    name = models.CharField(max_length=255)
+    description = models.TextField()
+    start_date = models.DateField()
+    end_date = models.DateField()
+    manager = models.ForeignKey(User, on_delete=models.CASCADE, related_name='managed_projects')
+    choice = (
+        ('Not Started', 'Not Started'),
+        ('In Progress', 'In Progress'),
+        ('Completed', 'Completed')
+    )
+    status = models.CharField(max_length=20, choices=choice, default='Not Started')
+
+    def __str__(self):
+        return self.name
+
+class Task(models.Model):
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tasks')
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_tasks')
+    assigned_to = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tasks')
+    due_date = models.DateField()
+    choice = (
+        ('Pending', 'Pending'),
+        ('In Progress', 'In Progress'),
+        ('Review', 'Review'),
+        ('Completed', 'Completed')
+    )
+    status = models.CharField(max_length=20, choices=choice, default='Pending')
+
+
+    def __str__(self):
+        return self.title
+
+class Training(models.Model):
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+    instructor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='instructed_trainings')
+    date = models.DateField()
+    attendees = models.ManyToManyField(User, related_name='attended_trainings')
+
+    def __str__(self):
+        return self.title
+
+class LeaveRequest(models.Model):
+    employee = models.ForeignKey(User, on_delete=models.CASCADE, related_name='leave_requests')
+    start_date = models.DateField()
+    end_date = models.DateField()
+    reason = models.TextField()
+    choice = (
+        ('Pending', 'Pending'),
+        ('Approved', 'Approved'),
+        ('Rejected', 'Rejected')
+    )
+    status = models.CharField(max_length=20, choices=choice, default='Pending')
+
+    def __str__(self):
+        return f"Leave Request by {self.employee.username} from {self.start_date} to {self.end_date}"
+
