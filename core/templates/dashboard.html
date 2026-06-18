@@ -296,25 +296,25 @@
       // Projects table
       document.getElementById('projects-container').innerHTML = renderTable(
         ['Name', 'Manager', 'Status', 'Start Date', 'End Date'],
-        data.projects.map(p => [p.name, p.manager, statusBadge(p.status), p.start_date, p.end_date])
+        data.projects.map(p => [p.name, p.manager ? p.manager.username : '—', statusBadge(p.status), p.start_date, p.end_date])
       );
 
       // Tasks table
       document.getElementById('tasks-container').innerHTML = renderTable(
         ['Title', 'Project', 'Assigned To', 'Status', 'Due Date'],
-        data.tasks.map(t => [t.title, t.project, t.assigned_to || '—', statusBadge(t.status), t.due_date])
+        data.tasks.map(t => [t.title, t.project ? t.project.name : '—', t.assigned_to ? t.assigned_to.username : '—', statusBadge(t.status), t.due_date])
       );
 
       // Trainings table
       document.getElementById('trainings-container').innerHTML = renderTable(
         ['Title', 'Instructor', 'Date'],
-        data.trainings.map(tr => [tr.title, tr.instructor, tr.date])
+        data.trainings.map(tr => [tr.title, tr.instructor ? tr.instructor.username : '—', tr.date])
       );
 
       // Leave Requests table
       document.getElementById('leave-container').innerHTML = renderTable(
         ['Employee', 'Start Date', 'End Date', 'Reason', 'Status'],
-        data.leave_requests.map(l => [l.employee, l.start_date, l.end_date, l.reason, statusBadge(l.status)])
+        data.leave_requests.map(l => [l.employee ? l.employee.username : '—', l.start_date, l.end_date, l.reason, statusBadge(l.status)])
       );
 
       // Show content
