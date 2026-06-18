@@ -3,7 +3,7 @@ from django.contrib.auth import authenticate, login, logout
 from .models import User, Project, Task, Training, LeaveRequest
 from .serializers import (
     ProjectSerializer, TaskSerializer, TrainingSerializer,
-    LeaveRequestSerializer, CreateUserSerializer, UserSerializer, LoginSerializer,
+    LeaveRequestSerializer, CreateUserSerializer, UserSerializer, LoginSerializer,NotificationSerializer
 )
 from .permissions import CanManageProject, CanManageTask, CanManageTraining, CanManageLeaveRequest
 from rest_framework import viewsets, status
@@ -11,6 +11,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.permissions import BasePermission
+from rest_framework.decorators import action
 
 
 class IsHROrInstructor(BasePermission):
@@ -82,13 +83,19 @@ class ProjectViewSet(viewsets.ModelViewSet):
     search_fields = ['name', 'description']
     ordering_fields = ['start_date', 'end_date', 'name']
 
+    def perform_create(self, serializer):
+        serializer.save(manager=self.request.user)
+
 class TaskViewSet(viewsets.ModelViewSet):
     queryset = Task.objects.all()
     serializer_class = TaskSerializer
     permission_classes = [IsAuthenticated, CanManageTask]
-    filterset_fields = ['status', 'project', 'assigned_to']
+    filterset_fields = ['status', 'project', 'assigned_to', 'priority']
     search_fields = ['title', 'description']
-    ordering_fields = ['due_date', 'status']
+    ordering_fields = ['due_date', 'status', 'priority']
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
 
 class TrainingViewSet(viewsets.ModelViewSet):
     queryset = Training.objects.all()
@@ -97,6 +104,11 @@ class TrainingViewSet(viewsets.ModelViewSet):
     filterset_fields = ['instructor', 'date']
     search_fields = ['title', 'description']
     ordering_fields = ['date']
+
+class UserViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
 
 class LeaveRequestViewSet(viewsets.ModelViewSet):
     queryset = LeaveRequest.objects.all()
@@ -171,4 +183,53 @@ def leave_requests_page(request):
     return render(request, 'leave_requests.html')
 
 def create_user_page(request):
-    return render(request, 'create_user.html')
+    return render(request, 'create_user.html')
+
+class NotificationViewSet(viewsets.ModelViewSet):
+    
+    serializer_class = NotificationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return self.queryset.filter(user=self.request.user).order_by('-created_at')
+    
+    @action(detail=True,methods=['POST'])
+    def mark_read(self,request,pk=None):
+        notification = self.get_object()
+        notification.is_read = True
+        notification.save()
+        return Response({'status': 'Notification marked as read'})
+
+from .models import Comment, ActivityLog
+from .serializers import CommentSerializer, ActivityLogSerializer
+
+class CommentViewSet(viewsets.ModelViewSet):
+    queryset = Comment.objects.all()
+    serializer_class = CommentSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ['task', 'author']
+    ordering_fields = ['-created_at']
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
+
+class ActivityLogViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = ActivityLog.objects.all()
+    serializer_class = ActivityLogSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ['task', 'user']
+    ordering_fields = ['-timestamp']
+
+from rest_framework.parsers import MultiPartParser, FormParser
+from .models import TaskAttachment
+from .serializers import TaskAttachmentSerializer
+
+class TaskAttachmentViewSet(viewsets.ModelViewSet):
+    queryset = TaskAttachment.objects.all()
+    serializer_class = TaskAttachmentSerializer
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+    filterset_fields = ['task', 'uploaded_by']
+
+    def perform_create(self, serializer):
+        serializer.save(uploaded_by=self.request.user)

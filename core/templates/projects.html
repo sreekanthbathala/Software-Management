@@ -29,6 +29,7 @@
     background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
     padding: 2rem; width: 90%; max-width: 500px; box-shadow: var(--shadow-lg);
     transform: translateY(20px); transition: transform 0.3s ease;
+    max-height: 90vh; overflow-y: auto;
   }
   .modal-overlay.show .modal { transform: translateY(0); }
   .modal h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 1.5rem; }
@@ -123,10 +124,11 @@
   async function loadData() {
     const res = await fetch(API, { credentials: 'same-origin' });
     if (res.status === 401 || res.status === 403) { window.location.href = '/login/'; return; }
-    const data = await res.json();
+    const resData = await res.json();
+    const data = resData.results !== undefined ? resData.results : resData;
     const container = document.getElementById('table-container');
 
-    if (data.length === 0) {
+    if (!data || data.length === 0) {
       container.innerHTML = '<div class="empty-state" style="padding:3rem;text-align:center;color:var(--text-muted)"><p style="font-size:2rem">📭</p><p>No projects yet. Create your first one!</p></div>';
       return;
     }
@@ -135,7 +137,7 @@
     data.forEach(p => {
       html += `<tr>
         <td><strong>${p.name}</strong></td>
-        <td>${p.manager}</td>
+        <td>${p.manager ? p.manager.username : '—'}</td>
         <td>${statusBadge(p.status)}</td>
         <td>${p.start_date}</td>
         <td>${p.end_date}</td>
@@ -199,7 +201,7 @@
     document.getElementById('description').value = p.description;
     document.getElementById('start_date').value = p.start_date;
     document.getElementById('end_date').value = p.end_date;
-    document.getElementById('manager').value = p.manager;
+    document.getElementById('manager').value = p.manager ? p.manager.id : '';
     document.getElementById('status').value = p.status;
     openModal('Edit Project');
   }

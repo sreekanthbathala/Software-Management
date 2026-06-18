@@ -150,13 +150,8 @@
 {% block content %}
 <div class="dashboard-container">
 
-  <!-- Loading State -->
-  <div id="loading-state" class="loading-container">
-    <div class="loading-pulse"></div>
-  </div>
-
-  <!-- Dashboard Content (hidden until loaded) -->
-  <div id="dashboard-content" class="hidden">
+  <!-- Dashboard Content -->
+  <div id="dashboard-content">
 
     <!-- Header -->
     <div class="dashboard-header">
@@ -301,8 +296,8 @@
 
       // Tasks table
       document.getElementById('tasks-container').innerHTML = renderTable(
-        ['Title', 'Project', 'Assigned To', 'Status', 'Due Date'],
-        data.tasks.map(t => [t.title, t.project ? t.project.name : '—', t.assigned_to ? t.assigned_to.username : '—', statusBadge(t.status), t.due_date])
+        ['Title', 'Project', 'Assigned To', 'Priority', 'Status', 'Due Date'],
+        data.tasks.map(t => [t.title, t.project ? t.project.name : '—', t.assigned_to ? t.assigned_to.username : '—', `<span class="badge ${t.priority === 'Critical' ? 'badge-error' : (t.priority === 'High' ? 'badge-warning' : 'badge-primary')}">${t.priority}</span>`, statusBadge(t.status), t.due_date])
       );
 
       // Trainings table
@@ -318,12 +313,11 @@
       );
 
       // Show content
-      document.getElementById('loading-state').classList.add('hidden');
-      document.getElementById('dashboard-content').classList.remove('hidden');
+      // (Loading symbol removed by user request)
 
     } catch (err) {
       console.error('Dashboard load error:', err);
-      window.location.href = '/login/';
+      document.getElementById('dashboard-content').innerHTML = `<div class="empty-state" style="color:var(--danger)"><div class="empty-icon">⚠️</div><p>Error loading dashboard.</p><p style="font-size:0.8rem">${err.message}</p></div>`;
     }
   }
 
