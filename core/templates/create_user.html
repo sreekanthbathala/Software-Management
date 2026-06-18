@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+
+{% block title %}Create User — SoftManage{% endblock %}
+
+{% block nav_items %}
+<li><a href="/dashboard/" class="nav-link">Dashboard</a></li>
+<li><a href="/dashboard/projects/" class="nav-link">Projects</a></li>
+<li><a href="/dashboard/tasks/" class="nav-link">Tasks</a></li>
+<li><a href="/dashboard/trainings/" class="nav-link">Trainings</a></li>
+<li><a href="/dashboard/leave-requests/" class="nav-link">Leave</a></li>
+<li><a href="/dashboard/create-user/" class="nav-link active">Create User</a></li>
+<li><a href="#" class="btn btn-outline btn-sm" id="logout-btn">Logout</a></li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .create-user-wrapper {
+    min-height: calc(100vh - 64px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+
+  .create-user-card {
+    width: 100%;
+    max-width: 480px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 2.5rem;
+    box-shadow: var(--shadow-lg);
+    animation: fadeInUp 0.5s ease;
+    position: relative;
+  }
+
+  .create-user-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--success), var(--accent));
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+
+  .card-header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  .card-header .icon {
+    width: 56px; height: 56px;
+    border-radius: 16px;
+    background: rgba(16, 185, 129, 0.15);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.6rem;
+    margin: 0 auto 1rem;
+  }
+
+  .card-header h1 { font-size: 1.5rem; font-weight: 800; margin-bottom: 0.25rem; }
+  .card-header p { color: var(--text-muted); font-size: 0.9rem; }
+
+  .create-form .btn-primary {
+    width: 100%; padding: 0.8rem; font-size: 1rem;
+    justify-content: center; margin-top: 0.5rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="create-user-wrapper">
+  <div class="create-user-card">
+    <div class="card-header">
+      <div class="icon">👤</div>
+      <h1>Create New User</h1>
+      <p>Only HR &amp; Instructors can create accounts</p>
+    </div>
+
+    <div id="alert-box" class="alert"></div>
+
+    <form class="create-form" id="create-user-form">
+      <div class="form-group">
+        <label class="form-label" for="username">Username</label>
+        <input type="text" class="form-control" id="username" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="email">Email</label>
+        <input type="email" class="form-control" id="email" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input type="password" class="form-control" id="password" minlength="8" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="role">Role</label>
+        <select class="form-control" id="role">
+          <option value="Employee">Employee</option>
+          <option value="Manager">Manager</option>
+          <option value="HR">HR</option>
+          <option value="Instructor">Instructor</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary" id="submit-btn">Create User</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function getCookie(name) { for (let c of document.cookie.split(';')) { c = c.trim(); if (c.startsWith(name + '=')) return decodeURIComponent(c.substring(name.length + 1)); } return null; }
+
+  function showAlert(msg, type = 'success') {
+    const b = document.getElementById('alert-box');
+    b.className = `alert alert-${type} show`;
+    b.textContent = msg;
+    if (type === 'success') setTimeout(() => b.classList.remove('show'), 5000);
+  }
+
+  document.getElementById('create-user-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true; btn.textContent = 'Creating...';
+
+    const body = {
+      username: document.getElementById('username').value,
+      email: document.getElementById('email').value,
+      password: document.getElementById('password').value,
+      role: document.getElementById('role').value,
+    };
+
+    try {
+      const res = await fetch('/api/auth/create-user/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+        credentials: 'same-origin',
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        showAlert(`User "${data.user.username}" (${data.user.role}) created successfully!`, 'success');
+        document.getElementById('create-user-form').reset();
+      } else if (res.status === 403) {
+        showAlert('Permission denied. Only HR and Instructors can create users.', 'error');
+      } else {
+        const errors = Object.entries(data).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join(' | ');
+        showAlert(errors, 'error');
+      }
+    } catch (err) {
+      showAlert('Network error. Please try again.', 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Create User';
+    }
+  });
+
+  document.getElementById('logout-btn').addEventListener('click', async (e) => { e.preventDefault(); await fetch('/api/auth/logout/', { method: 'POST', headers: { 'X-CSRFToken': getCookie('csrftoken') }, credentials: 'same-origin' }); window.location.href = '/'; });
+</script>
+{% endblock %}

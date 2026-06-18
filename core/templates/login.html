@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+
+{% block title %}Login — SoftManage{% endblock %}
+
+{% block nav_items %}
+<li><a href="/" class="nav-link">Home</a></li>
+<li><a href="/login/" class="nav-link active">Login</a></li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .login-wrapper {
+    min-height: calc(100vh - 64px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    position: relative;
+  }
+
+  .login-wrapper::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(circle at 50% 30%, rgba(99, 102, 241, 0.08) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .login-card {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 2.5rem;
+    box-shadow: var(--shadow-lg);
+    animation: fadeInUp 0.5s ease;
+  }
+
+  .login-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+
+  .login-header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  .login-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background: rgba(99, 102, 241, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    margin: 0 auto 1rem;
+  }
+
+  .login-header h1 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-bottom: 0.25rem;
+  }
+
+  .login-header p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+
+  .login-form .btn-primary {
+    width: 100%;
+    padding: 0.8rem;
+    font-size: 1rem;
+    justify-content: center;
+    margin-top: 0.5rem;
+  }
+
+  .login-footer {
+    text-align: center;
+    margin-top: 1.5rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+  }
+
+  .loading-spinner {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top: 2px solid #fff;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-wrapper">
+  <div class="login-card">
+    <div class="login-header">
+      <div class="login-icon">🔐</div>
+      <h1>Welcome Back</h1>
+      <p>Sign in to access your dashboard</p>
+    </div>
+
+    <div id="login-alert" class="alert alert-error"></div>
+
+    <form class="login-form" id="login-form">
+      <div class="form-group">
+        <label class="form-label" for="username">Username</label>
+        <input type="text" class="form-control" id="username" name="username" placeholder="Enter your username" required autofocus>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input type="password" class="form-control" id="password" name="password" placeholder="Enter your password" required>
+      </div>
+      <button type="submit" class="btn btn-primary" id="login-btn">
+        <span id="login-btn-text">Sign In</span>
+      </button>
+    </form>
+
+    <div class="login-footer">
+      <a href="/">← Back to Home</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const form = document.getElementById('login-form');
+  const alertBox = document.getElementById('login-alert');
+  const loginBtn = document.getElementById('login-btn');
+  const btnText = document.getElementById('login-btn-text');
+
+  function getCookie(name) {
+    const cookies = document.cookie.split(';');
+    for (let c of cookies) {
+      c = c.trim();
+      if (c.startsWith(name + '=')) return decodeURIComponent(c.substring(name.length + 1));
+    }
+    return null;
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    alertBox.classList.remove('show');
+    loginBtn.disabled = true;
+    btnText.innerHTML = '<span class="loading-spinner"></span>';
+
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+
+    try {
+      const res = await fetch('/api/auth/login/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken'),
+        },
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        window.location.href = '/dashboard/';
+      } else {
+        alertBox.textContent = data.error || 'Invalid credentials. Please try again.';
+        alertBox.classList.add('show');
+      }
+    } catch (err) {
+      alertBox.textContent = 'Network error. Please try again.';
+      alertBox.classList.add('show');
+    } finally {
+      loginBtn.disabled = false;
+      btnText.textContent = 'Sign In';
+    }
+  });
+</script>
+{% endblock %}

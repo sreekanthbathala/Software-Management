@@ -6,6 +6,19 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'username', 'email', 'role']
 
+
+class CreateUserSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, min_length=8)
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'password', 'role']
+
+
+class LoginSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    password = serializers.CharField(write_only=True)
+
 class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
@@ -16,7 +29,7 @@ class TaskSerializer(serializers.ModelSerializer):
     assigned_to = serializers.ReadOnlyField(source='assigned_to.username')
     class Meta:
         model = Task
-        fields = ['id', 'title', 'description', 'project', 'assigned_to', 'due_date', 'status']
+        fields = ['id', 'title', 'description', 'project', 'assigned_to', 'due_date', 'status', 'created_by']
 
 class TrainingSerializer(serializers.ModelSerializer):
     class Meta:

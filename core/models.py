@@ -1,6 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-
+from django.contrib.auth.hashers import make_password
 
 class User(AbstractUser):
     Role_CHOICES = (
@@ -12,6 +12,12 @@ class User(AbstractUser):
     role = models.CharField(max_length=20, choices=Role_CHOICES, default='Employee')
     def __str__(self):
         return f"{self.username} ({self.role})"
+
+    def save(self, *args, **kwargs):
+        # Hash password if it is not already hashed
+        if self.password and not (self.password.startswith('pbkdf2_') or self.password.startswith('argon2') or self.password.startswith('bcrypt')):
+            self.password = make_password(self.password)
+        super().save(*args, **kwargs)
 
 class Project(models.Model):
     name = models.CharField(max_length=255)

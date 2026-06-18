@@ -1,47 +1,55 @@
 from rest_framework.permissions import IsAuthenticated, BasePermission, SAFE_METHODS
 from .models import User, Project, Task, Training, LeaveRequest
 
-class IsAdmin(BasePermission):
-    def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role == 'Admin'
 
-class IsManager(BasePermission):
-    def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role == 'Manager'
 
-class IsHR(BasePermission):
+class CanManageProject(BasePermission):
+    """Allow write access if user is the project manager, OR has Manager/HR role."""
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role == 'HR'
+        if request.method in SAFE_METHODS:
+            return True
+        return request.user.role in ('Manager', 'HR')
 
-class IsEmployee(BasePermission):
-    def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role == 'Employee'
-
-class IsInstructor(BasePermission):
-    def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role == 'Instructor'
-
-class IsProjectManagerOrReadOnly(BasePermission):
     def has_object_permission(self, request, view, obj):
         if request.method in SAFE_METHODS:
             return True
-        return obj.manager == request.user
+        return obj.manager == request.user or request.user.role in ('Manager', 'HR')
 
-class IsTaskCreatorOrReadOnly(BasePermission):
+
+class CanManageTask(BasePermission):
+    """Allow write access if user is the task creator, OR has Manager/HR role."""
+    def has_permission(self, request, view):
+        if request.method in SAFE_METHODS:
+            return True
+        return request.user.role in ('Manager', 'HR', 'Employee')
+
     def has_object_permission(self, request, view, obj):
         if request.method in SAFE_METHODS:
             return True
-        return obj.created_by == request.user
+        return obj.created_by == request.user or request.user.role in ('Manager', 'HR')
 
-class IsTrainingInstructorOrReadOnly(BasePermission):
+
+class CanManageTraining(BasePermission):
+    """Allow write access if user is the instructor, OR has Instructor/Manager/HR role."""
+    def has_permission(self, request, view):
+        if request.method in SAFE_METHODS:
+            return True
+        return request.user.role in ('Instructor', 'Manager', 'HR')
+
     def has_object_permission(self, request, view, obj):
         if request.method in SAFE_METHODS:
             return True
-        return obj.instructor == request.user
+        return obj.instructor == request.user or request.user.role in ('Manager', 'HR')
 
-class IsLeaveRequestEmployeeOrReadOnly(BasePermission):
+
+class CanManageLeaveRequest(BasePermission):
+    """Allow write access if user is the employee who made the request, OR has Manager/HR role."""
+    def has_permission(self, request, view):
+        if request.method in SAFE_METHODS:
+            return True
+        return request.user.role in ('Employee', 'Manager', 'HR')
+
     def has_object_permission(self, request, view, obj):
         if request.method in SAFE_METHODS:
             return True
-        return obj.employee == request.user
-
+        return obj.employee == request.user or request.user.role in ('Manager', 'HR')

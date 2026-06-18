@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+
+{% block title %}Leave Requests — SoftManage{% endblock %}
+
+{% block nav_items %}
+<li><a href="/dashboard/" class="nav-link">Dashboard</a></li>
+<li><a href="/dashboard/projects/" class="nav-link">Projects</a></li>
+<li><a href="/dashboard/tasks/" class="nav-link">Tasks</a></li>
+<li><a href="/dashboard/trainings/" class="nav-link">Trainings</a></li>
+<li><a href="/dashboard/leave-requests/" class="nav-link active">Leave</a></li>
+<li><a href="#" class="btn btn-outline btn-sm" id="logout-btn">Logout</a></li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .page-container { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+  .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; animation: fadeInUp 0.4s ease; }
+  .page-header h1 { font-size: 1.8rem; font-weight: 800; }
+  .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 2000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+  .modal-overlay.show { opacity: 1; pointer-events: all; }
+  .modal { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem; width: 90%; max-width: 500px; box-shadow: var(--shadow-lg); transform: translateY(20px); transition: transform 0.3s ease; }
+  .modal-overlay.show .modal { transform: translateY(0); }
+  .modal h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 1.5rem; }
+  .modal-actions { display: flex; gap: 0.75rem; margin-top: 1.5rem; }
+  .modal-actions .btn { flex: 1; justify-content: center; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+  <div class="page-header">
+    <h1>📋 Leave Requests</h1>
+    <button class="btn btn-primary" id="add-btn">+ New Request</button>
+  </div>
+  <div id="alert-box" class="alert"></div>
+  <div id="table-container"><div style="display:flex;justify-content:center;padding:3rem"><div style="width:40px;height:40px;border:3px solid var(--border);border-top:3px solid var(--primary);border-radius:50%;animation:spin 0.8s linear infinite"></div></div></div>
+</div>
+
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h2 id="modal-title">New Leave Request</h2>
+    <form id="item-form">
+      <div class="form-group"><label class="form-label" for="employee">Employee (User ID)</label><input type="number" class="form-control" id="employee" required></div>
+      <div class="form-group"><label class="form-label" for="start_date">Start Date</label><input type="date" class="form-control" id="start_date" required></div>
+      <div class="form-group"><label class="form-label" for="end_date">End Date</label><input type="date" class="form-control" id="end_date" required></div>
+      <div class="form-group"><label class="form-label" for="reason">Reason</label><textarea class="form-control" id="reason" rows="3" required></textarea></div>
+      <div class="form-group"><label class="form-label" for="status">Status</label>
+        <select class="form-control" id="status">
+          <option value="Pending">Pending</option><option value="Approved">Approved</option><option value="Rejected">Rejected</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" id="cancel-btn">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+<style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const API = '/api/leave-requests/';
+  let editId = null;
+
+  function getCookie(name) { for (let c of document.cookie.split(';')) { c = c.trim(); if (c.startsWith(name + '=')) return decodeURIComponent(c.substring(name.length + 1)); } return null; }
+  function statusBadge(s) {
+    const m = { 'Pending': 'badge-warning', 'Approved': 'badge-success', 'Rejected': 'badge-danger' };
+    return `<span class="badge ${m[s] || 'badge-primary'}">${s}</span>`;
+  }
+  function showAlert(msg, type = 'success') { const b = document.getElementById('alert-box'); b.className = `alert alert-${type} show`; b.textContent = msg; setTimeout(() => b.classList.remove('show'), 3000); }
+
+  async function loadData() {
+    const res = await fetch(API, { credentials: 'same-origin' });
+    if (res.status === 401 || res.status === 403) { window.location.href = '/login/'; return; }
+    const data = await res.json();
+    const c = document.getElementById('table-container');
+    if (data.length === 0) { c.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--text-muted)"><p style="font-size:2rem">📭</p><p>No leave requests yet.</p></div>'; return; }
+    let html = '<div class="table-container"><table><thead><tr><th>Employee</th><th>Start</th><th>End</th><th>Reason</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+    data.forEach(l => {
+      html += `<tr><td>${l.employee}</td><td>${l.start_date}</td><td>${l.end_date}</td><td>${l.reason}</td><td>${statusBadge(l.status)}</td>
+        <td><button class="btn btn-outline btn-sm" onclick="editItem(${l.id})">Edit</button> <button class="btn btn-danger btn-sm" onclick="deleteItem(${l.id})">Delete</button></td></tr>`;
+    });
+    c.innerHTML = html + '</tbody></table></div>';
+  }
+
+  function openModal(t = 'New Leave Request') { document.getElementById('modal-title').textContent = t; document.getElementById('modal').classList.add('show'); }
+  function closeModal() { document.getElementById('modal').classList.remove('show'); document.getElementById('item-form').reset(); editId = null; }
+
+  document.getElementById('add-btn').addEventListener('click', () => { editId = null; openModal(); });
+  document.getElementById('cancel-btn').addEventListener('click', closeModal);
+
+  document.getElementById('item-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const body = { employee: parseInt(document.getElementById('employee').value), start_date: document.getElementById('start_date').value, end_date: document.getElementById('end_date').value, reason: document.getElementById('reason').value, status: document.getElementById('status').value };
+    const url = editId ? `${API}${editId}/` : API;
+    const res = await fetch(url, { method: editId ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') }, credentials: 'same-origin', body: JSON.stringify(body) });
+    if (res.ok) { closeModal(); showAlert(editId ? 'Request updated!' : 'Request created!'); loadData(); } else { showAlert(JSON.stringify(await res.json()), 'error'); }
+  });
+
+  async function editItem(id) {
+    const p = await (await fetch(`${API}${id}/`, { credentials: 'same-origin' })).json();
+    editId = id;
+    document.getElementById('employee').value = p.employee; document.getElementById('start_date').value = p.start_date;
+    document.getElementById('end_date').value = p.end_date; document.getElementById('reason').value = p.reason;
+    document.getElementById('status').value = p.status;
+    openModal('Edit Leave Request');
+  }
+
+  async function deleteItem(id) {
+    if (!confirm('Delete this leave request?')) return;
+    const res = await fetch(`${API}${id}/`, { method: 'DELETE', headers: { 'X-CSRFToken': getCookie('csrftoken') }, credentials: 'same-origin' });
+    if (res.ok) { showAlert('Request deleted.'); loadData(); } else showAlert('Failed.', 'error');
+  }
+
+  document.getElementById('logout-btn').addEventListener('click', async (e) => { e.preventDefault(); await fetch('/api/auth/logout/', { method: 'POST', headers: { 'X-CSRFToken': getCookie('csrftoken') }, credentials: 'same-origin' }); window.location.href = '/'; });
+
+  loadData();
+</script>
+{% endblock %}

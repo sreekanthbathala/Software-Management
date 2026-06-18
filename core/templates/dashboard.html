@@ -1,0 +1,343 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard — SoftManage{% endblock %}
+
+{% block nav_items %}
+<li><a href="/dashboard/" class="nav-link active">Dashboard</a></li>
+<li><a href="/dashboard/projects/" class="nav-link">Projects</a></li>
+<li><a href="/dashboard/tasks/" class="nav-link">Tasks</a></li>
+<li><a href="/dashboard/trainings/" class="nav-link">Trainings</a></li>
+<li><a href="/dashboard/leave-requests/" class="nav-link">Leave</a></li>
+<li><a href="#" class="btn btn-outline btn-sm" id="logout-btn">Logout</a></li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .dashboard-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .dashboard-header {
+    margin-bottom: 2rem;
+    animation: fadeInUp 0.4s ease;
+  }
+
+  .dashboard-header h1 {
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin-bottom: 0.25rem;
+  }
+
+  .dashboard-header p {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+  }
+
+  .user-role-badge {
+    display: inline-block;
+    padding: 0.2rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+  }
+
+  /* Stat Cards */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    transition: all var(--transition);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    opacity: 0.06;
+    transform: translate(30%, -30%);
+  }
+
+  .stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow);
+  }
+
+  .stat-card.purple { border-left: 3px solid var(--primary); }
+  .stat-card.purple::after { background: var(--primary); }
+  .stat-card.cyan { border-left: 3px solid var(--accent); }
+  .stat-card.cyan::after { background: var(--accent); }
+  .stat-card.green { border-left: 3px solid var(--success); }
+  .stat-card.green::after { background: var(--success); }
+  .stat-card.amber { border-left: 3px solid var(--warning); }
+  .stat-card.amber::after { background: var(--warning); }
+
+  .stat-card .stat-icon { font-size: 1.5rem; margin-bottom: 0.75rem; }
+  .stat-card .stat-value { font-size: 2rem; font-weight: 800; }
+  .stat-card .stat-title {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 0.25rem;
+  }
+
+  /* Sections */
+  .dashboard-section {
+    margin-bottom: 2.5rem;
+    animation: fadeInUp 0.5s ease;
+  }
+
+  .section-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-muted);
+  }
+
+  .empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+
+  .loading-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 50vh;
+  }
+
+  .loading-pulse {
+    width: 48px;
+    height: 48px;
+    border: 3px solid var(--border);
+    border-top: 3px solid var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @media (max-width: 640px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .dashboard-container { padding: 1rem; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+
+  <!-- Loading State -->
+  <div id="loading-state" class="loading-container">
+    <div class="loading-pulse"></div>
+  </div>
+
+  <!-- Dashboard Content (hidden until loaded) -->
+  <div id="dashboard-content" class="hidden">
+
+    <!-- Header -->
+    <div class="dashboard-header">
+      <h1>Dashboard <span class="user-role-badge badge-primary" id="user-role"></span></h1>
+      <p>Welcome back, <strong id="user-name"></strong>. Here's your overview.</p>
+    </div>
+
+    <!-- Quick Actions (Role specific) -->
+    <div id="quick-actions" class="dashboard-section hidden" style="margin-bottom:1.5rem">
+      <div style="display:flex;gap:1rem;">
+        <a href="/dashboard/create-user/" class="card" style="display:flex;align-items:center;gap:1rem;text-decoration:none;flex:1;max-width:300px;border-left:3px solid var(--primary)">
+          <div style="font-size:2rem;">👤</div>
+          <div>
+            <h3 style="font-size:1rem;margin:0;color:var(--text-primary)">Create New User</h3>
+            <p style="font-size:0.8rem;color:var(--text-secondary);margin:0;">Add team members</p>
+          </div>
+        </a>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card purple animate-in">
+        <div class="stat-icon">📁</div>
+        <div class="stat-value" id="stat-projects">0</div>
+        <div class="stat-title">Projects</div>
+      </div>
+      <div class="stat-card cyan animate-in">
+        <div class="stat-icon">✅</div>
+        <div class="stat-value" id="stat-tasks">0</div>
+        <div class="stat-title">Tasks</div>
+      </div>
+      <div class="stat-card green animate-in">
+        <div class="stat-icon">🎓</div>
+        <div class="stat-value" id="stat-trainings">0</div>
+        <div class="stat-title">Trainings</div>
+      </div>
+      <div class="stat-card amber animate-in">
+        <div class="stat-icon">📋</div>
+        <div class="stat-value" id="stat-leave">0</div>
+        <div class="stat-title">Leave Requests</div>
+      </div>
+    </div>
+
+    <!-- Projects Table -->
+    <div class="dashboard-section">
+      <div class="section-title">📁 Your Projects</div>
+      <div id="projects-container"></div>
+    </div>
+
+    <!-- Tasks Table -->
+    <div class="dashboard-section">
+      <div class="section-title">✅ Your Tasks</div>
+      <div id="tasks-container"></div>
+    </div>
+
+    <!-- Trainings Table -->
+    <div class="dashboard-section">
+      <div class="section-title">🎓 Trainings</div>
+      <div id="trainings-container"></div>
+    </div>
+
+    <!-- Leave Requests Table -->
+    <div class="dashboard-section">
+      <div class="section-title">📋 Leave Requests</div>
+      <div id="leave-container"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function getCookie(name) {
+    const cookies = document.cookie.split(';');
+    for (let c of cookies) {
+      c = c.trim();
+      if (c.startsWith(name + '=')) return decodeURIComponent(c.substring(name.length + 1));
+    }
+    return null;
+  }
+
+  function statusBadge(status) {
+    const map = {
+      'Not Started': 'badge-warning', 'In Progress': 'badge-info', 'Completed': 'badge-success',
+      'Pending': 'badge-warning', 'Review': 'badge-primary', 'Approved': 'badge-success', 'Rejected': 'badge-danger',
+    };
+    return `<span class="badge ${map[status] || 'badge-primary'}">${status}</span>`;
+  }
+
+  function renderTable(headers, rows) {
+    if (rows.length === 0) {
+      return `<div class="empty-state"><div class="empty-icon">📭</div><p>No records found.</p></div>`;
+    }
+    let html = '<div class="table-container"><table><thead><tr>';
+    headers.forEach(h => html += `<th>${h}</th>`);
+    html += '</tr></thead><tbody>';
+    rows.forEach(r => {
+      html += '<tr>';
+      r.forEach(cell => html += `<td>${cell}</td>`);
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+    return html;
+  }
+
+  async function loadDashboard() {
+    try {
+      const res = await fetch('/api/dashboard/', {
+        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        credentials: 'same-origin',
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        window.location.href = '/login/';
+        return;
+      }
+
+      const data = await res.json();
+
+      // Set user info
+      if (data.user) {
+        document.getElementById('user-name').textContent = data.user.username;
+        document.getElementById('user-role').textContent = data.user.role;
+        
+        if (data.user.role === 'HR' || data.user.role === 'Instructor') {
+          document.getElementById('quick-actions').classList.remove('hidden');
+        }
+      }
+
+      // Set stats
+      document.getElementById('stat-projects').textContent = data.projects.length;
+      document.getElementById('stat-tasks').textContent = data.tasks.length;
+      document.getElementById('stat-trainings').textContent = data.trainings.length;
+      document.getElementById('stat-leave').textContent = data.leave_requests.length;
+
+      // Projects table
+      document.getElementById('projects-container').innerHTML = renderTable(
+        ['Name', 'Manager', 'Status', 'Start Date', 'End Date'],
+        data.projects.map(p => [p.name, p.manager, statusBadge(p.status), p.start_date, p.end_date])
+      );
+
+      // Tasks table
+      document.getElementById('tasks-container').innerHTML = renderTable(
+        ['Title', 'Project', 'Assigned To', 'Status', 'Due Date'],
+        data.tasks.map(t => [t.title, t.project, t.assigned_to || '—', statusBadge(t.status), t.due_date])
+      );
+
+      // Trainings table
+      document.getElementById('trainings-container').innerHTML = renderTable(
+        ['Title', 'Instructor', 'Date'],
+        data.trainings.map(tr => [tr.title, tr.instructor, tr.date])
+      );
+
+      // Leave Requests table
+      document.getElementById('leave-container').innerHTML = renderTable(
+        ['Employee', 'Start Date', 'End Date', 'Reason', 'Status'],
+        data.leave_requests.map(l => [l.employee, l.start_date, l.end_date, l.reason, statusBadge(l.status)])
+      );
+
+      // Show content
+      document.getElementById('loading-state').classList.add('hidden');
+      document.getElementById('dashboard-content').classList.remove('hidden');
+
+    } catch (err) {
+      console.error('Dashboard load error:', err);
+      window.location.href = '/login/';
+    }
+  }
+
+  // Logout
+  document.getElementById('logout-btn').addEventListener('click', async (e) => {
+    e.preventDefault();
+    await fetch('/api/auth/logout/', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') },
+      credentials: 'same-origin',
+    });
+    window.location.href = '/';
+  });
+
+  loadDashboard();
+</script>
+{% endblock %}
