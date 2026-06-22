@@ -7,7 +7,6 @@
 <li><a href="/dashboard/projects/" class="nav-link">Projects</a></li>
 <li><a href="/dashboard/tasks/" class="nav-link">Tasks</a></li>
 <li><a href="/dashboard/trainings/" class="nav-link">Trainings</a></li>
-<li><a href="/dashboard/leave-requests/" class="nav-link">Leave</a></li>
 <li><a href="#" class="btn btn-outline btn-sm" id="logout-btn">Logout</a></li>
 {% endblock %}
 
@@ -189,11 +188,7 @@
         <div class="stat-value" id="stat-trainings">0</div>
         <div class="stat-title">Trainings</div>
       </div>
-      <div class="stat-card amber animate-in">
-        <div class="stat-icon">📋</div>
-        <div class="stat-value" id="stat-leave">0</div>
-        <div class="stat-title">Leave Requests</div>
-      </div>
+
     </div>
 
     <!-- Projects Table -->
@@ -214,11 +209,7 @@
       <div id="trainings-container"></div>
     </div>
 
-    <!-- Leave Requests Table -->
-    <div class="dashboard-section">
-      <div class="section-title">📋 Leave Requests</div>
-      <div id="leave-container"></div>
-    </div>
+
   </div>
 </div>
 {% endblock %}
@@ -286,7 +277,6 @@
       document.getElementById('stat-projects').textContent = data.projects.length;
       document.getElementById('stat-tasks').textContent = data.tasks.length;
       document.getElementById('stat-trainings').textContent = data.trainings.length;
-      document.getElementById('stat-leave').textContent = data.leave_requests.length;
 
       // Projects table
       document.getElementById('projects-container').innerHTML = renderTable(
@@ -306,11 +296,7 @@
         data.trainings.map(tr => [tr.title, tr.instructor ? tr.instructor.username : '—', tr.date])
       );
 
-      // Leave Requests table
-      document.getElementById('leave-container').innerHTML = renderTable(
-        ['Employee', 'Start Date', 'End Date', 'Reason', 'Status'],
-        data.leave_requests.map(l => [l.employee ? l.employee.username : '—', l.start_date, l.end_date, l.reason, statusBadge(l.status)])
-      );
+
 
       // Show content
       // (Loading symbol removed by user request)

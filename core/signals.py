@@ -25,11 +25,7 @@ def log_task_changes(sender, instance, created, **kwargs):
                 task=instance,
                 action=f"Status changed from '{old.status}' to '{instance.status}'."
             )
-        if old.priority != instance.priority:
-            ActivityLog.objects.create(
-                task=instance,
-                action=f"Priority changed from '{old.priority}' to '{instance.priority}'."
-            )
+
 
 @receiver(post_save, sender=Task)
 def notify_task_assignment(sender, instance, created, **kwargs):
@@ -39,7 +35,7 @@ def notify_task_assignment(sender, instance, created, **kwargs):
             message=f"You have been assigned a new task: '{instance.title}'."
         )
         if instance.assigned_to.email:
-            message_text = f"Hello {instance.assigned_to.username},\n\nYou have been assigned a new task: '{instance.title}'.\nDue Date: {instance.due_date}\nPriority: {instance.priority}"
+            message_text = f"Hello {instance.assigned_to.username},\n\nYou have been assigned a new task: '{instance.title}'.\nDue Date: {instance.due_date}"
             send_mail(
                 subject='New Task Assigned - SoftManage',
                 message=message_text,

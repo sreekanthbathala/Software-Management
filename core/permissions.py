@@ -1,5 +1,5 @@
 from rest_framework.permissions import IsAuthenticated, BasePermission, SAFE_METHODS
-from .models import User, Project, Task, Training, LeaveRequest
+from .models import User, Project, Task, Training
 
 
 
@@ -42,14 +42,4 @@ class CanManageTraining(BasePermission):
         return obj.instructor == request.user or request.user.role in ('Manager', 'HR')
 
 
-class CanManageLeaveRequest(BasePermission):
-    """Allow write access if user is the employee who made the request, OR has Manager/HR role."""
-    def has_permission(self, request, view):
-        if request.method in SAFE_METHODS:
-            return True
-        return request.user.role in ('Employee', 'Manager', 'HR')
 
-    def has_object_permission(self, request, view, obj):
-        if request.method in SAFE_METHODS:
-            return True
-        return obj.employee == request.user or request.user.role in ('Manager', 'HR')

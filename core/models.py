@@ -64,20 +64,7 @@ class Training(models.Model):
     def __str__(self):
         return self.title
 
-class LeaveRequest(models.Model):
-    employee = models.ForeignKey(User, on_delete=models.CASCADE, related_name='leave_requests')
-    start_date = models.DateField()
-    end_date = models.DateField()
-    reason = models.TextField()
-    choice = (
-        ('Pending', 'Pending'),
-        ('Approved', 'Approved'),
-        ('Rejected', 'Rejected')
-    )
-    status = models.CharField(max_length=20, choices=choice, default='Pending')
 
-    def __str__(self):
-        return f"Leave Request by {self.employee.username} from {self.start_date} to {self.end_date}"
 
 class Notification(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')

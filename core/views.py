@@ -1,17 +1,18 @@
 from django.shortcuts import render
 from django.contrib.auth import authenticate, login, logout
-from .models import User, Project, Task, Training, LeaveRequest
+from .models import User, Project, Task, Training
 from .serializers import (
     ProjectSerializer, TaskSerializer, TrainingSerializer,
-    LeaveRequestSerializer, CreateUserSerializer, UserSerializer, LoginSerializer,NotificationSerializer
+    CreateUserSerializer, UserSerializer, LoginSerializer,NotificationSerializer
 )
-from .permissions import CanManageProject, CanManageTask, CanManageTraining, CanManageLeaveRequest
+from .permissions import CanManageProject, CanManageTask, CanManageTraining
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.permissions import BasePermission
 from rest_framework.decorators import action
+from drf_spectacular.utils import extend_schema
 
 
 class IsHROrInstructor(BasePermission):
@@ -23,6 +24,10 @@ class IsHROrInstructor(BasePermission):
 class LoginView(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        request=LoginSerializer,
+        responses={200: UserSerializer}
+    )
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -46,6 +51,10 @@ class LoginView(APIView):
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        request=None,
+        responses={200: None}
+    )
     def post(self, request):
         logout(request)
         return Response({'message': 'Logout successful'})
@@ -53,6 +62,11 @@ class LogoutView(APIView):
 
 class CreateUserView(APIView):
     permission_classes = [IsAuthenticated, IsHROrInstructor]
+
+    @extend_schema(
+            request=CreateUserSerializer,
+            responses={201: UserSerializer}
+    )
 
     def post(self, request):
         serializer = CreateUserSerializer(data=request.data)
@@ -70,8 +84,10 @@ class CreateUserView(APIView):
 
 class CurrentUserView(APIView):
     permission_classes = [IsAuthenticated]
-
+    @extend_schema(responses={200: UserSerializer})
+    
     def get(self, request):
+        serializer= UserSerializer(request.user)
         return Response(UserSerializer(request.user).data)
 
 
@@ -90,9 +106,9 @@ class TaskViewSet(viewsets.ModelViewSet):
     queryset = Task.objects.all()
     serializer_class = TaskSerializer
     permission_classes = [IsAuthenticated, CanManageTask]
-    filterset_fields = ['status', 'project', 'assigned_to', 'priority']
+    filterset_fields = ['status', 'project', 'assigned_to']
     search_fields = ['title', 'description']
-    ordering_fields = ['due_date', 'status', 'priority']
+    ordering_fields = ['due_date', 'status']
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
@@ -110,44 +126,36 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
 
-class LeaveRequestViewSet(viewsets.ModelViewSet):
-    queryset = LeaveRequest.objects.all()
-    serializer_class = LeaveRequestSerializer
-    permission_classes = [IsAuthenticated, CanManageLeaveRequest]
-    filterset_fields = ['status', 'employee']
-    search_fields = ['reason']
-    ordering_fields = ['start_date', 'end_date']
+
 
 class DashboardViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        responses={200: None}
+    )
     def list(self, request):
         user = request.user
         if user.role == 'Manager':
             projects = Project.objects.filter(manager=user)
             tasks = Task.objects.filter(project__manager=user)
             trainings = Training.objects.filter(instructor=user)
-            leave_requests = LeaveRequest.objects.filter(employee__in=Task.objects.filter(project__manager=user).values_list('assigned_to', flat=True))
         elif user.role == 'HR':
             projects = Project.objects.all()
             tasks = Task.objects.all()
             trainings = Training.objects.all()
-            leave_requests = LeaveRequest.objects.all()
         elif user.role == 'Employee':
             projects = Project.objects.filter(tasks__assigned_to=user).distinct()
             tasks = Task.objects.filter(assigned_to=user)
             trainings = Training.objects.filter(attendees=user)
-            leave_requests = LeaveRequest.objects.filter(employee=user)
         elif user.role == 'Instructor':
             projects = Project.objects.filter(tasks__assigned_to__in=Training.objects.filter(instructor=user).values_list('attendees', flat=True)).distinct()
             tasks = Task.objects.filter(assigned_to__in=Training.objects.filter(instructor=user).values_list('attendees', flat=True)).distinct()
             trainings = Training.objects.filter(instructor=user)
-            leave_requests = LeaveRequest.objects.filter(employee__in=Training.objects.filter(instructor=user).values_list('attendees', flat=True))
         else:
             projects = Project.objects.none()
             tasks = Task.objects.none()
             trainings = Training.objects.none()
-            leave_requests = LeaveRequest.objects.none()
 
         data = {
             'user': {
@@ -157,7 +165,6 @@ class DashboardViewSet(viewsets.ViewSet):
             'projects': ProjectSerializer(projects, many=True).data,
             'tasks': TaskSerializer(tasks, many=True).data,
             'trainings': TrainingSerializer(trainings, many=True).data,
-            'leave_requests': LeaveRequestSerializer(leave_requests, many=True).data,
         }
         return Response(data)
 
@@ -179,24 +186,29 @@ def tasks_page(request):
 def trainings_page(request):
     return render(request, 'trainings.html')
 
-def leave_requests_page(request):
-    return render(request, 'leave_requests.html')
-
 def create_user_page(request):
     return render(request, 'create_user.html')
 
 class NotificationViewSet(viewsets.ModelViewSet):
-    
     serializer_class = NotificationSerializer
     permission_classes = [IsAuthenticated]
+    queryset = None
 
     def get_queryset(self):
+        # Avoid errors when generating schema (e.g. drf-yasg swagger_fake_view)
+        if getattr(self, "swagger_fake_view", False):
+            from .models import Notification
+            return Notification.objects.none()
+        # Ensure queryset is defined lazily to avoid import/order issues
+        if self.queryset is None:
+            from .models import Notification
+            self.queryset = Notification.objects.all()
         return self.queryset.filter(user=self.request.user).order_by('-created_at')
     
     @action(detail=True,methods=['POST'])
     def mark_read(self,request,pk=None):
         notification = self.get_object()
-        notification.is_read = True
+        notification.is_read = True     
         notification.save()
         return Response({'status': 'Notification marked as read'})
 

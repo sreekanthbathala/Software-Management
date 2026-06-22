@@ -11,7 +11,7 @@ router.register(r'projects', views.ProjectViewSet)
 router.register(r'tasks', views.TaskViewSet, basename='task')
 router.register(r'trainings', views.TrainingViewSet, basename='training')
 router.register(r'dashboard', views.DashboardViewSet, basename='dashboard')
-router.register(r'leave-requests', views.LeaveRequestViewSet, basename='leaverequest')
+
 router.register(r'users', views.UserViewSet, basename='user')
 router.register(r'notifications', views.NotificationViewSet, basename='notification')
 router.register(r'comments', views.CommentViewSet, basename='comment')
@@ -40,7 +40,7 @@ urlpatterns = [
     path('dashboard/projects/', views.projects_page, name='projects_page'),
     path('dashboard/tasks/', views.tasks_page, name='tasks_page'),
     path('dashboard/trainings/', views.trainings_page, name='trainings_page'),
-    path('dashboard/leave-requests/', views.leave_requests_page, name='leave_requests_page'),
+
     path('dashboard/create-user/', views.create_user_page, name='create_user_page'),
 ]
 

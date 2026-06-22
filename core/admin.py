@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, Project, Task, Training, LeaveRequest
+from .models import User, Project, Task, Training
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
@@ -25,8 +25,3 @@ class TrainingAdmin(admin.ModelAdmin):
     list_filter = ('instructor',)
     search_fields = ('title', 'description')
 
-@admin.register(LeaveRequest)
-class LeaveRequestAdmin(admin.ModelAdmin):
-    list_display = ('employee', 'start_date', 'end_date', 'status')
-    list_filter = ('status',)
-    search_fields = ('employee__username', 'reason')

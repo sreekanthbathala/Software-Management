@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Project, Task, Training, LeaveRequest, Notification, Comment, ActivityLog, TaskAttachment
+from .models import User, Project, Task, Training, Notification, Comment, ActivityLog, TaskAttachment
 from django.utils import timezone
 
 
@@ -43,7 +43,7 @@ class ProjectSerializer(serializers.ModelSerializer):
 class TaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
-        fields = ['id', 'title', 'description', 'project', 'assigned_to', 'priority', 'due_date', 'status', 'created_by']
+        fields = ['id', 'title', 'description', 'project', 'assigned_to', 'due_date', 'status', 'created_by']
         read_only_fields = ['created_by']
 
     def to_representation(self, instance):
@@ -83,25 +83,6 @@ class TrainingSerializer(serializers.ModelSerializer):
         if not self.instance and value < timezone.now().date():
             raise serializers.ValidationError("Training date cannot be in the past.")
         return value
-
-
-class LeaveRequestSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = LeaveRequest
-        fields = ['id', 'employee', 'start_date', 'end_date', 'reason', 'status']
-
-    def to_representation(self, instance):
-        response = super().to_representation(instance)
-        if instance.employee:
-            response['employee'] = UserSerializer(instance.employee).data
-        return response
-
-    def validate(self, data):
-        start_date = data.get('start_date', getattr(self.instance, 'start_date', None))
-        end_date = data.get('end_date', getattr(self.instance, 'end_date', None))
-        if start_date and end_date and end_date < start_date:
-            raise serializers.ValidationError({"end_date": "End date cannot be before start date."})
-        return data
 
 
 class NotificationSerializer(serializers.ModelSerializer):

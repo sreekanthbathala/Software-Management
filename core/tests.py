@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from rest_framework import status
 from django.urls import reverse
-from .models import Project, Task, Training, LeaveRequest, Notification, Comment, ActivityLog
+from .models import Project, Task, Training, Notification, Comment, ActivityLog
 import datetime
 
 User = get_user_model()
@@ -53,8 +53,7 @@ class CoreAPITests(TestCase):
             project=self.project,
             created_by=self.manager_user,
             assigned_to=self.employee_user,
-            due_date=datetime.date.today() + datetime.timedelta(days=5),
-            priority="High"
+            due_date=datetime.date.today() + datetime.timedelta(days=5)
         )
 
         self.assertEqual(Notification.objects.count(), 1)
