@@ -50,14 +50,7 @@ class Task(models.Model):
     )
     status = models.CharField(max_length=20, choices=choice, default='Pending')
 
-    PRIORITY_CHOICES = (
-        ('Low', 'Low'),
-        ('Medium', 'Medium'),
-        ('High', 'High'),
-        ('Critical', 'Critical')
-    )
-    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='Medium')
-
+   
     def __str__(self):
         return self.title
 
