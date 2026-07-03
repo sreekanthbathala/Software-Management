@@ -42,7 +42,7 @@ urlpatterns = [
     path('dashboard/trainings/', views.trainings_page, name='trainings_page'),
 
     path('dashboard/create-user/', views.create_user_page, name='create_user_page'),
-]
+]   
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

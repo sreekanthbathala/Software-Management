@@ -43,7 +43,7 @@ class ProjectSerializer(serializers.ModelSerializer):
 class TaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
-        fields = ['id', 'title', 'description', 'project', 'assigned_to', 'due_date', 'status', 'created_by']
+        fields = ['id', 'title', 'description', 'project', 'assigned_to', 'due_date', 'status', 'created_by', 'priority']
         read_only_fields = ['created_by']
 
     def to_representation(self, instance):
